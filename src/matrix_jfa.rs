@@ -19,7 +19,7 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
         }
     }
 
-    let mut step_size: usize = 256;
+    let mut step_size: usize = 128;
     while step_size > 0 {
         index_buffer.clear();
         index_buffer.extend(visitor_set.iter().map(|it| *it));
