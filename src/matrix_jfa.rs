@@ -60,7 +60,11 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
             }
         }
 
-        step_size *= 2;
+        if usize::MAX / 2 >= step_size {
+            step_size *= 2;
+        } else {
+            break;
+        }
     }
 }
 

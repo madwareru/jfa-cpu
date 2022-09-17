@@ -66,7 +66,7 @@ impl MatrixJfa {
         }
     }
 
-    pub fn calc<const WIDTH: usize, const DEPTH: usize, const HEIGHT: usize>(
+    pub fn calc<const WIDTH: usize, const HEIGHT: usize>(
         &mut self, point_positions: impl IntoIterator<Item = (usize, usize)>
     ) -> &[(usize, usize)] {
         matrix_jfa::calc_matrix_jfa::<WIDTH, HEIGHT>(

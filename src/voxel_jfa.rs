@@ -87,7 +87,11 @@ pub(crate) fn calc_voxel_jfa<const WIDTH: usize, const DEPTH: usize, const HEIGH
             }
         }
 
-        step_size *= 2;
+        if usize::MAX / 2 >= step_size {
+            step_size *= 2;
+        } else {
+            break;
+        }
     }
 }
 

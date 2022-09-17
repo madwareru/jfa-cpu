@@ -39,7 +39,11 @@ pub(crate) fn calc_array_jfa<const SIZE: usize>(
             }
         }
 
-        step_size *= 2;
+        if usize::MAX / 2 >= step_size {
+            step_size *= 2;
+        } else {
+            break;
+        }
     }
 }
 
