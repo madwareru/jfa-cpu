@@ -19,8 +19,8 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
         }
     }
 
-    let mut step_size: usize = 1;
-    while visitor_set.len() < WIDTH * HEIGHT {
+    let mut step_size: usize = 2048;
+    while step_size > 0 {
         index_buffer.clear();
         index_buffer.extend(visitor_set.iter().map(|it| *it));
         for idx in index_buffer.drain(..) {
@@ -64,11 +64,7 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
             }
         }
 
-        if usize::MAX / 2 >= step_size {
-            step_size *= 2;
-        } else {
-            break;
-        }
+        step_size /= 2;
     }
 }
 
