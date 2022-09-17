@@ -71,5 +71,5 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
 #[inline(always)]
 fn dst((lx, ly): (usize, usize), (rx, ry): (usize, usize)) -> f32 {
     let (dx, dy) = (lx as f32 - rx as f32, ly as f32 - ry as f32);
-    dx * dx + dy * dy
+    (dx * dx + dy * dy).sqrt()
 }
