@@ -30,8 +30,8 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
                 let pos = (i - step_size, j);
                 let ix = idx - step_size;
                 let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, (i, j)) < dst(pos, current) {
-                    buffer[ix] = (i, j);
+                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
+                    buffer[ix] = buffer[idx];
                     visitor_set.insert(ix);
                 }
             }
@@ -39,8 +39,8 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
                 let pos = (i + step_size, j);
                 let ix = idx + step_size;
                 let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, (i, j)) < dst(pos, current) {
-                    buffer[ix] = (i, j);
+                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
+                    buffer[ix] = buffer[idx];
                     visitor_set.insert(ix);
                 }
             }
@@ -48,8 +48,8 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
                 let pos = (i, j - step_size);
                 let ix = idx - step_size * WIDTH;
                 let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, (i, j)) < dst(pos, current) {
-                    buffer[ix] = (i, j);
+                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
+                    buffer[ix] = buffer[idx];
                     visitor_set.insert(ix);
                 }
             }
@@ -57,8 +57,8 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
                 let pos = (i, j + step_size);
                 let ix = idx + step_size * WIDTH;
                 let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, (i, j)) < dst(pos, current) {
-                    buffer[ix] = (i, j);
+                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
+                    buffer[ix] = buffer[idx];
                     visitor_set.insert(ix);
                 }
             }
@@ -66,10 +66,11 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
 
         step_size /= 2;
     }
+    println!("visitor set filled by {} items", visitor_set.len());
 }
 
 #[inline(always)]
 fn dst((lx, ly): (usize, usize), (rx, ry): (usize, usize)) -> f32 {
     let (dx, dy) = (lx as f32 - rx as f32, ly as f32 - ry as f32);
-    (dx * dx + dy * dy).sqrt()
+    dx * dx + dy * dy
 }
