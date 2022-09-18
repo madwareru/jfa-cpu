@@ -26,68 +26,26 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
         for idx in index_buffer.drain(..) {
             let i = idx % WIDTH;
             let j = idx / WIDTH;
-            if step_size <= i {
-                let pos = (i - step_size, j);
-                let ix = idx - step_size;
-                let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                    buffer[ix] = buffer[idx];
-                    visitor_set.insert(ix);
-                }
-            } else {
-                let pos = (0, j);
-                let ix = pos.1 * WIDTH;
-                let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                    buffer[ix] = buffer[idx];
-                    visitor_set.insert(ix);
-                }
-            }
-            if i + step_size < WIDTH {
-                let pos = (i + step_size, j);
-                let ix = idx + step_size;
-                let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                    buffer[ix] = buffer[idx];
-                    visitor_set.insert(ix);
-                }
-            } else {
-                let pos = (WIDTH-1, j);
-                let ix = pos.0 + pos.1 * WIDTH;
-                let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                    buffer[ix] = buffer[idx];
-                    visitor_set.insert(ix);
-                }
-            }
-            if step_size <= j {
-                let pos = (i, j - step_size);
-                let ix = idx - step_size * WIDTH;
-                let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                    buffer[ix] = buffer[idx];
-                    visitor_set.insert(ix);
-                }
-            } else {
-                let pos = (i, 0);
-                let ix = pos.0;
-                let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                    buffer[ix] = buffer[idx];
-                    visitor_set.insert(ix);
-                }
-            }
-            if j + step_size < HEIGHT {
-                let pos = (i, j + step_size);
-                let ix = idx + step_size * WIDTH;
-                let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                    buffer[ix] = buffer[idx];
-                    visitor_set.insert(ix);
-                }
-            } else {
-                let pos = (i, HEIGHT - 1);
-                let ix = pos.0 + pos.1 * WIDTH;
+            let bounds = [
+                (
+                    if step_size <= i { i - step_size } else { 0 },
+                    if i + step_size < WIDTH { i + step_size } else { WIDTH - 1}
+                ),
+                (
+                    if step_size <= j { j - step_size } else { 0 },
+                    if j + step_size < HEIGHT { j + step_size } else { HEIGHT - 1}
+                ),
+            ];
+
+            let places_to_visit = [
+                (bounds[0].0, j), (bounds[0].1, j),
+                (i, bounds[1].0), (i, bounds[1].1),
+                (bounds[0].0, bounds[1].0), (bounds[0].1, bounds[1].0),
+                (bounds[0].0, bounds[1].1), (bounds[0].1, bounds[1].1),
+            ];
+
+            for pos in places_to_visit {
+                let ix = pos.0 + WIDTH * pos.1;
                 let current = buffer[ix];
                 if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
                     buffer[ix] = buffer[idx];
@@ -96,81 +54,6 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
             }
         }
         step_size /= 2;
-    }
-    step_size = 1;
-    index_buffer.clear();
-    index_buffer.extend(visitor_set.iter().map(|it| *it));
-    for idx in index_buffer.drain(..) {
-        let i = idx % WIDTH;
-        let j = idx / WIDTH;
-        if step_size <= i {
-            let pos = (i - step_size, j);
-            let ix = idx - step_size;
-            let current = buffer[ix];
-            if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                buffer[ix] = buffer[idx];
-                visitor_set.insert(ix);
-            }
-        } else {
-            let pos = (0, j);
-            let ix = pos.1 * WIDTH;
-            let current = buffer[ix];
-            if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                buffer[ix] = buffer[idx];
-                visitor_set.insert(ix);
-            }
-        }
-        if i + step_size < WIDTH {
-            let pos = (i + step_size, j);
-            let ix = idx + step_size;
-            let current = buffer[ix];
-            if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                buffer[ix] = buffer[idx];
-                visitor_set.insert(ix);
-            }
-        } else {
-            let pos = (WIDTH-1, j);
-            let ix = pos.0 + pos.1 * WIDTH;
-            let current = buffer[ix];
-            if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                buffer[ix] = buffer[idx];
-                visitor_set.insert(ix);
-            }
-        }
-        if step_size <= j {
-            let pos = (i, j - step_size);
-            let ix = idx - step_size * WIDTH;
-            let current = buffer[ix];
-            if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                buffer[ix] = buffer[idx];
-                visitor_set.insert(ix);
-            }
-        } else {
-            let pos = (i, 0);
-            let ix = pos.0;
-            let current = buffer[ix];
-            if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                buffer[ix] = buffer[idx];
-                visitor_set.insert(ix);
-            }
-        }
-        if j + step_size < HEIGHT {
-            let pos = (i, j + step_size);
-            let ix = idx + step_size * WIDTH;
-            let current = buffer[ix];
-            if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                buffer[ix] = buffer[idx];
-                visitor_set.insert(ix);
-            }
-        } else {
-            let pos = (i, HEIGHT - 1);
-            let ix = pos.0 + pos.1 * WIDTH;
-            let current = buffer[ix];
-            if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                buffer[ix] = buffer[idx];
-                visitor_set.insert(ix);
-            }
-        }
     }
     println!("visitor set filled by {} items", visitor_set.len());
 }
