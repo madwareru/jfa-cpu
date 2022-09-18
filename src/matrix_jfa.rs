@@ -44,11 +44,15 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
                 (bounds[0].0, bounds[1].1), (bounds[0].1, bounds[1].1),
             ];
 
+            let val = unsafe { *buffer.get_unchecked(idx) };
+
             for pos in places_to_visit {
                 let ix = pos.0 + WIDTH * pos.1;
-                let current = buffer[ix];
-                if !visitor_set.contains(&(ix)) || dst(pos, buffer[idx]) < dst(pos, current) {
-                    buffer[ix] = buffer[idx];
+                let current = unsafe { *buffer.get_unchecked(ix) };
+                if !visitor_set.contains(&(ix)) || dst(pos, val) < dst(pos, current) {
+                    unsafe {
+                        *buffer.get_unchecked_mut(ix) = val;
+                    }
                     visitor_set.insert(ix);
                 }
             }
