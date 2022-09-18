@@ -59,7 +59,6 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
         }
         step_size /= 2;
     }
-    println!("visitor set filled by {} items", visitor_set.len());
 }
 
 #[inline(always)]
