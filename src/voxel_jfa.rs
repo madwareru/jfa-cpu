@@ -1,10 +1,12 @@
 use std::collections::HashSet;
+use crate::Wrapping;
 
 pub(crate) fn calc_voxel_jfa<const WIDTH: usize, const DEPTH: usize, const HEIGHT: usize>(
     point_positions: impl IntoIterator<Item = (usize, usize, usize)>,
     buffer: &mut Vec<(usize, usize, usize)>,
     index_buffer: &mut Vec<usize>,
-    visitor_set: &mut HashSet<usize>
+    visitor_set: &mut HashSet<usize>,
+    wrapping: Wrapping
 ) {
     let idx = |x: usize, y: usize, z: usize| {
         y * WIDTH * DEPTH + z * WIDTH + x
@@ -23,75 +25,99 @@ pub(crate) fn calc_voxel_jfa<const WIDTH: usize, const DEPTH: usize, const HEIGH
         }
     }
 
-    let mut step_size: usize = 1;
-    while visitor_set.len() < size {
+    let mut step_size: usize = WIDTH.max(HEIGHT).max(DEPTH);
+    while step_size > 0 {
         index_buffer.clear();
         index_buffer.extend(visitor_set.iter().map(|it| *it));
         for id in index_buffer.drain(..) {
-            let i = id % WIDTH;
-            let j = id / (WIDTH * HEIGHT);
-            let k = (id % (WIDTH * HEIGHT)) / WIDTH;
+            let x = id % WIDTH;
+            let y = id / (WIDTH * DEPTH);
+            let z = (id % (WIDTH * DEPTH)) / WIDTH;
 
-            if step_size <= i {
-                let pos = (i - step_size, j, k);
-                let current = buffer[id - step_size];
-                if !visitor_set.contains(&(id - step_size)) || dst(pos, (i, j, k)) < dst(pos, current) {
-                    buffer[id - step_size] = (i, j, k);
-                    visitor_set.insert(id - step_size);
-                }
-            }
+            let bounds = [
+                (
+                    if step_size <= x { x - step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => 0,
+                            Wrapping::Repeat => (x + WIDTH - (step_size % WIDTH)) % WIDTH
+                        }
+                    },
+                    if x + step_size < WIDTH { x + step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => WIDTH - 1,
+                            Wrapping::Repeat => (x + step_size) % WIDTH
+                        }
+                    }
+                ),
+                (
+                    if step_size <= y { y - step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => 0,
+                            Wrapping::Repeat => (y + HEIGHT - (step_size % HEIGHT)) % HEIGHT
+                        }
+                    },
+                    if y + step_size < HEIGHT { y + step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => HEIGHT - 1,
+                            Wrapping::Repeat => (y + step_size) % HEIGHT
+                        }
+                    }
+                ),
+                (
+                    if step_size <= z { z - step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => 0,
+                            Wrapping::Repeat => (z + DEPTH - (step_size % DEPTH)) % DEPTH
+                        }
+                    },
+                    if z + step_size < DEPTH { z + step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => DEPTH - 1,
+                            Wrapping::Repeat => (z + step_size) % DEPTH
+                        }
+                    }
+                ),
+            ];
 
-            if i + step_size < WIDTH {
-                let pos = (i + step_size, j, k);
-                let current = buffer[id + step_size];
-                if !visitor_set.contains(&(id + step_size)) || dst(pos, (i, j, k)) < dst(pos, current) {
-                    buffer[id + step_size] = (i, j, k);
-                    visitor_set.insert(id + step_size);
-                }
-            }
+            let val = unsafe { *buffer.get_unchecked(idx(x, y, z)) };
 
-            if step_size <= k {
-                let pos = (i, j, k - step_size);
-                let current = buffer[id - step_size * WIDTH];
-                if !visitor_set.contains(&(id - step_size * WIDTH)) || dst(pos, (i, j, k)) < dst(pos, current) {
-                    buffer[id - step_size * WIDTH] = (i, j, k);
-                    visitor_set.insert(id - step_size * WIDTH);
-                }
-            }
+            for xx in -1..=1 {
+                for yy in -1..=1 {
+                    for zz in -1..=1 {
+                        if xx + yy + zz == 0 {
+                            continue;
+                        }
+                        let pos = (
+                            match xx {
+                                -1 => bounds[0].0,
+                                1 => bounds[0].1,
+                                _ => x
+                            },
+                            match yy {
+                                -1 => bounds[1].0,
+                                1 => bounds[1].1,
+                                _ => y
+                            },
+                            match zz {
+                                -1 => bounds[2].0,
+                                1 => bounds[2].1,
+                                _ => z
+                            }
+                        );
 
-            if k + step_size < DEPTH {
-                let pos = (i, j, k + step_size);
-                let current = buffer[id + step_size * WIDTH];
-                if !visitor_set.contains(&(id + step_size * WIDTH)) || dst(pos, (i, j, k)) < dst(pos, current) {
-                    buffer[id + step_size * WIDTH] = (i, j, k);
-                    visitor_set.insert(id + step_size * WIDTH);
-                }
-            }
-
-            if step_size <= j {
-                let pos = (i, j - step_size, k);
-                let current = buffer[id - step_size * WIDTH * HEIGHT];
-                if !visitor_set.contains(&(id - step_size * WIDTH * HEIGHT)) || dst(pos, (i, j, k)) < dst(pos, current) {
-                    buffer[id - step_size * WIDTH * HEIGHT] = (i, j, k);
-                    visitor_set.insert(id - step_size * WIDTH * HEIGHT);
-                }
-            }
-
-            if j + step_size < HEIGHT {
-                let pos = (i, j + step_size, k);
-                let current = buffer[id + step_size * WIDTH * HEIGHT];
-                if !visitor_set.contains(&(id + step_size * WIDTH * HEIGHT)) || dst(pos, (i, j, k)) < dst(pos, current) {
-                    buffer[id + step_size * WIDTH * HEIGHT] = (i, j, k);
-                    visitor_set.insert(id + step_size * WIDTH * HEIGHT);
+                        let ix = idx(pos.0, pos.1, pos.2);
+                        let current = unsafe { *buffer.get_unchecked(ix) };
+                        if !visitor_set.contains(&(ix)) || dst(pos, val) < dst(pos, current) {
+                            unsafe {
+                                *buffer.get_unchecked_mut(ix) = val;
+                            }
+                            visitor_set.insert(ix);
+                        }
+                    }
                 }
             }
         }
-
-        if usize::MAX / 2 >= step_size {
-            step_size *= 2;
-        } else {
-            break;
-        }
+        step_size /= 2;
     }
 }
 

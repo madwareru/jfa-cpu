@@ -1,10 +1,12 @@
 use std::collections::HashSet;
+use crate::Wrapping;
 
 pub(crate) fn calc_array_jfa<const SIZE: usize>(
     point_positions: impl IntoIterator<Item = usize>,
     buffer: &mut Vec<usize>,
     index_buffer: &mut Vec<usize>,
-    visitor_set: &mut HashSet<usize>
+    visitor_set: &mut HashSet<usize>,
+    wrapping: Wrapping
 ) {
     {
         buffer.clear();
@@ -16,34 +18,39 @@ pub(crate) fn calc_array_jfa<const SIZE: usize>(
         }
     }
 
-    let mut step_size: usize = 1;
-    while visitor_set.len() < SIZE {
+    let mut step_size: usize = SIZE;
+    while step_size > 0 {
         index_buffer.clear();
         index_buffer.extend(visitor_set.iter().map(|it| *it));
         for i in index_buffer.drain(..) {
-            if step_size <= i {
-                let pos = i - step_size;
-                let current = buffer[pos];
-                if !visitor_set.contains(&pos) || dst(pos, i) < dst(pos, current) {
-                    buffer[pos] = i;
-                    visitor_set.insert(pos);
+            let bounds = [
+                if step_size <= i { i - step_size } else {
+                    match wrapping {
+                        Wrapping::Clamp => 0,
+                        Wrapping::Repeat => (i + SIZE - (step_size % SIZE)) % SIZE
+                    }
+                },
+                if i + step_size < SIZE { i + step_size } else {
+                    match wrapping {
+                        Wrapping::Clamp => SIZE - 1,
+                        Wrapping::Repeat => (i + step_size) % SIZE
+                    }
                 }
-            }
-            if i + step_size < SIZE {
-                let pos = i + step_size;
-                let current = buffer[pos];
-                if !visitor_set.contains(&pos) || dst(pos, i) < dst(pos, current) {
-                    buffer[pos] = i;
-                    visitor_set.insert(pos);
-                }
-            }
-        }
+            ];
 
-        if usize::MAX / 2 >= step_size {
-            step_size *= 2;
-        } else {
-            break;
+            let val = unsafe { *buffer.get_unchecked(i) };
+
+            for ix in bounds {
+                let current = unsafe { *buffer.get_unchecked(ix) };
+                if !visitor_set.contains(&(ix)) || dst(ix, val) < dst(ix, current) {
+                    unsafe {
+                        *buffer.get_unchecked_mut(ix) = val;
+                    }
+                    visitor_set.insert(ix);
+                }
+            }
         }
+        step_size /= 2;
     }
 }
 

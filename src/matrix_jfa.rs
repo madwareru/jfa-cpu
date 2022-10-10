@@ -1,10 +1,12 @@
 use std::collections::HashSet;
+use crate::Wrapping;
 
 pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
     point_positions: impl IntoIterator<Item = (usize, usize)>,
     buffer: &mut Vec<(usize, usize)>,
     index_buffer: &mut Vec<usize>,
-    visitor_set: &mut HashSet<usize>
+    visitor_set: &mut HashSet<usize>,
+    wrapping: Wrapping
 ) {
     {
         buffer.clear();
@@ -28,12 +30,32 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
             let j = idx / WIDTH;
             let bounds = [
                 (
-                    if step_size <= i { i - step_size } else { 0 },
-                    if i + step_size < WIDTH { i + step_size } else { WIDTH - 1}
+                    if step_size <= i { i - step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => 0,
+                            Wrapping::Repeat => (i + WIDTH - (step_size % WIDTH)) % WIDTH
+                        }
+                    },
+                    if i + step_size < WIDTH { i + step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => WIDTH - 1,
+                            Wrapping::Repeat => (i + step_size) % WIDTH
+                        }
+                    }
                 ),
                 (
-                    if step_size <= j { j - step_size } else { 0 },
-                    if j + step_size < HEIGHT { j + step_size } else { HEIGHT - 1}
+                    if step_size <= j { j - step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => 0,
+                            Wrapping::Repeat => (j + HEIGHT - (step_size % HEIGHT)) % HEIGHT
+                        }
+                    },
+                    if j + step_size < HEIGHT { j + step_size } else {
+                        match wrapping {
+                            Wrapping::Clamp => HEIGHT - 1,
+                            Wrapping::Repeat => (j + step_size) % HEIGHT
+                        }
+                    }
                 ),
             ];
 
