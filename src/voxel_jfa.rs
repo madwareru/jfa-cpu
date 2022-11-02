@@ -107,11 +107,33 @@ pub(crate) fn calc_voxel_jfa<const WIDTH: usize, const DEPTH: usize, const HEIGH
 
                         let ix = idx(pos.0, pos.1, pos.2);
                         let current = unsafe { *buffer.get_unchecked(ix) };
-                        if !visitor_set.contains(&(ix)) || dst(pos, val) < dst(pos, current) {
+                        if !visitor_set.contains(&(ix)) {
                             unsafe {
                                 *buffer.get_unchecked_mut(ix) = val;
                             }
                             visitor_set.insert(ix);
+                        } else {
+                            let dst_to_val = match wrapping {
+                                Wrapping::Clamp => dst(pos, val),
+                                Wrapping::Repeat => wrapping_dst::<WIDTH, DEPTH, HEIGHT>(
+                                    pos,
+                                    val
+                                )
+                            };
+
+                            let dst_to_current = match wrapping {
+                                Wrapping::Clamp => dst(pos, current),
+                                Wrapping::Repeat => wrapping_dst::<WIDTH, DEPTH, HEIGHT>(
+                                    pos,
+                                    current
+                                )
+                            };
+
+                            if dst_to_val < dst_to_current {
+                                unsafe {
+                                    *buffer.get_unchecked_mut(ix) = val;
+                                }
+                            }
                         }
                     }
                 }
@@ -124,5 +146,17 @@ pub(crate) fn calc_voxel_jfa<const WIDTH: usize, const DEPTH: usize, const HEIGH
 #[inline(always)]
 fn dst((lx, ly, lz): (usize, usize, usize), (rx, ry, rz): (usize, usize, usize)) -> f32 {
     let (dx, dy, dz) = (lx as f32 - rx as f32, ly as f32 - ry as f32, lz as f32 - rz as f32);
+    dx * dx + dy * dy + dz * dz
+}
+
+#[inline(always)]
+fn wrapping_dst<const W: usize, const D: usize, const H: usize>(
+    (lx, ly, lz): (usize, usize, usize),
+    (rx, ry, rz): (usize, usize, usize)
+) -> f32 {
+    let (dx, dy, dz) = (lx as f32 - rx as f32, ly as f32 - ry as f32, lz as f32 - rz as f32);
+    let dx = dx.min(W as f32 - dx);
+    let dy = dy.min(H as f32 - dy);
+    let dz = dz.min(D as f32 - dz);
     dx * dx + dy * dy + dz * dz
 }

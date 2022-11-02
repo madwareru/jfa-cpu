@@ -71,11 +71,34 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
             for pos in places_to_visit {
                 let ix = pos.0 + WIDTH * pos.1;
                 let current = unsafe { *buffer.get_unchecked(ix) };
-                if !visitor_set.contains(&(ix)) || dst(pos, val) < dst(pos, current) {
+
+                if !visitor_set.contains(&(ix)) {
                     unsafe {
                         *buffer.get_unchecked_mut(ix) = val;
                     }
                     visitor_set.insert(ix);
+                } else {
+                    let dst_to_val = match wrapping {
+                        Wrapping::Clamp => dst(pos, val),
+                        Wrapping::Repeat => wrapping_dst::<WIDTH, HEIGHT>(
+                            pos,
+                            val
+                        )
+                    };
+
+                    let dst_to_current = match wrapping {
+                        Wrapping::Clamp => dst(pos, current),
+                        Wrapping::Repeat => wrapping_dst::<WIDTH, HEIGHT>(
+                            pos,
+                            current
+                        )
+                    };
+
+                    if dst_to_val < dst_to_current {
+                        unsafe {
+                            *buffer.get_unchecked_mut(ix) = val;
+                        }
+                    }
                 }
             }
         }
@@ -86,5 +109,13 @@ pub(crate) fn calc_matrix_jfa<const WIDTH: usize, const HEIGHT: usize>(
 #[inline(always)]
 fn dst((lx, ly): (usize, usize), (rx, ry): (usize, usize)) -> f32 {
     let (dx, dy) = (lx as f32 - rx as f32, ly as f32 - ry as f32);
+    dx * dx + dy * dy
+}
+
+#[inline(always)]
+fn wrapping_dst<const W: usize, const H: usize>((lx, ly): (usize, usize), (rx, ry): (usize, usize)) -> f32 {
+    let (dx, dy) = (lx as f32 - rx as f32, ly as f32 - ry as f32);
+    let dx = dx.min(W as f32 - dx);
+    let dy = dy.min(H as f32 - dy);
     dx * dx + dy * dy
 }

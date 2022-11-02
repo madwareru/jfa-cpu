@@ -19,7 +19,7 @@ pub(crate) fn calc_array_jfa<const SIZE: usize>(
     }
 
     let mut step_size: usize = SIZE;
-    while step_size > 0 {
+    while visitor_set.len() < SIZE {
         index_buffer.clear();
         index_buffer.extend(visitor_set.iter().map(|it| *it));
         for i in index_buffer.drain(..) {
@@ -42,11 +42,33 @@ pub(crate) fn calc_array_jfa<const SIZE: usize>(
 
             for ix in bounds {
                 let current = unsafe { *buffer.get_unchecked(ix) };
-                if !visitor_set.contains(&(ix)) || dst(ix, val) < dst(ix, current) {
+                if !visitor_set.contains(&(ix)) {
                     unsafe {
                         *buffer.get_unchecked_mut(ix) = val;
                     }
                     visitor_set.insert(ix);
+                } else {
+                    let dst_to_val = match wrapping {
+                        Wrapping::Clamp => dst(ix, val),
+                        Wrapping::Repeat => wrapping_dst::<SIZE>(
+                            ix,
+                            val
+                        )
+                    };
+
+                    let dst_to_current = match wrapping {
+                        Wrapping::Clamp => dst(ix, current),
+                        Wrapping::Repeat => wrapping_dst::<SIZE>(
+                            ix,
+                            current
+                        )
+                    };
+
+                    if dst_to_val < dst_to_current {
+                        unsafe {
+                            *buffer.get_unchecked_mut(ix) = val;
+                        }
+                    }
                 }
             }
         }
@@ -56,3 +78,9 @@ pub(crate) fn calc_array_jfa<const SIZE: usize>(
 
 #[inline(always)]
 fn dst(lhs: usize, rhs: usize) -> usize { if lhs <= rhs { rhs - lhs } else { lhs - rhs } }
+
+#[inline(always)]
+fn wrapping_dst<const SIZE: usize>(lhs: usize, rhs: usize) -> usize {
+    let d = if lhs <= rhs { rhs - lhs } else { lhs - rhs };
+    d.min(SIZE - d)
+}
